@@ -2,7 +2,7 @@
   "name": "java-bytecode-viewer",
   "displayName": "Java Bytecode Viewer",
   "description": "View and analyze Java compiled bytecode directly inside VS Code like IntelliJ IDEA",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "local",
   "engines": {
     "vscode": "^1.85.0"
@@ -59,6 +59,21 @@
         "command": "javaBytecode.showCurrentFileBytecode",
         "title": "Java: Show Bytecode",
         "icon": "$(file-code)"
+      },
+      {
+        "command": "javaBytecode.toggleVerbose",
+        "title": "Toggle Verbose (Constant Pool)",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "javaBytecode.togglePrivateMembers",
+        "title": "Toggle Private Members",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "javaBytecode.toggleLineNumbers",
+        "title": "Toggle Line Number Tables",
+        "icon": "$(list-ordered)"
       }
     ],
     "menus": {
@@ -72,7 +87,7 @@
       "view/item/context": [
         {
           "command": "javaBytecode.openClassBytecode",
-          "when": "view == java-bytecode-explorer && viewItem == classFile",
+          "when": "view == java-bytecode-explorer && (viewItem == classFile || viewItem == innerClassFile)",
           "group": "inline"
         }
       ],
@@ -81,6 +96,21 @@
           "command": "javaBytecode.showCurrentFileBytecode",
           "when": "resourceExtname == .java",
           "group": "navigation"
+        },
+        {
+          "command": "javaBytecode.toggleVerbose",
+          "when": "resourceScheme == javabytecode",
+          "group": "navigation@1"
+        },
+        {
+          "command": "javaBytecode.togglePrivateMembers",
+          "when": "resourceScheme == javabytecode",
+          "group": "navigation@2"
+        },
+        {
+          "command": "javaBytecode.toggleLineNumbers",
+          "when": "resourceScheme == javabytecode",
+          "group": "navigation@3"
         }
       ]
     },
@@ -128,6 +158,11 @@
           "default": true,
           "description": "Show line number and local variable tables (-l)."
         },
+        "javaBytecode.autoSyncCursor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scroll and highlight corresponding bytecode when moving cursor in .java file."
+        },
         "javaBytecode.outputDirectories": {
           "type": "array",
           "items": {
@@ -160,4 +195,3 @@
     "typescript": "^5.3.3"
   }
 }
-
