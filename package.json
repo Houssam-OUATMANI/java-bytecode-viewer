@@ -1,0 +1,163 @@
+{
+  "name": "java-bytecode-viewer",
+  "displayName": "Java Bytecode Viewer",
+  "description": "View and analyze Java compiled bytecode directly inside VS Code like IntelliJ IDEA",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "java",
+    "bytecode",
+    "javap",
+    "jvm",
+    "disassembler"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.java",
+    "workspaceContains:pom.xml",
+    "workspaceContains:build.gradle",
+    "workspaceContains:build.gradle.kts",
+    "onView:java-bytecode-explorer"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "java-bytecode-container",
+          "title": "Java Bytecode",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "java-bytecode-container": [
+        {
+          "id": "java-bytecode-explorer",
+          "name": "Compiled Classes",
+          "type": "tree"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "javaBytecode.refreshTree",
+        "title": "Refresh Classes",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "javaBytecode.openClassBytecode",
+        "title": "Open Bytecode"
+      },
+      {
+        "command": "javaBytecode.showCurrentFileBytecode",
+        "title": "Java: Show Bytecode",
+        "icon": "$(file-code)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "javaBytecode.refreshTree",
+          "when": "view == java-bytecode-explorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "javaBytecode.openClassBytecode",
+          "when": "view == java-bytecode-explorer && viewItem == classFile",
+          "group": "inline"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "javaBytecode.showCurrentFileBytecode",
+          "when": "resourceExtname == .java",
+          "group": "navigation"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "java-bytecode",
+        "aliases": [
+          "Java Bytecode",
+          "bytecode"
+        ],
+        "extensions": [
+          ".javap",
+          ".class.bc"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "java-bytecode",
+        "scopeName": "source.java-bytecode",
+        "path": "./syntaxes/java-bytecode.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Java Bytecode Viewer",
+      "properties": {
+        "javaBytecode.javapPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the javap executable. If empty, it will be auto-detected."
+        },
+        "javaBytecode.verbose": {
+          "type": "boolean",
+          "default": true,
+          "description": "Print additional information like constant pool and stack maps (-v)."
+        },
+        "javaBytecode.showPrivateMembers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show all classes and members including private ones (-p)."
+        },
+        "javaBytecode.showLineAndLocalVariableTables": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show line number and local variable tables (-l)."
+        },
+        "javaBytecode.outputDirectories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/target/classes",
+            "**/target/test-classes",
+            "**/build/classes/java/main",
+            "**/build/classes/java/test",
+            "**/build/classes/kotlin/main",
+            "**/bin"
+          ],
+          "description": "Glob patterns for directories containing compiled .class files."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "bun run build:prod",
+    "build": "bun run esbuild.config.ts",
+    "build:prod": "bun run esbuild.config.ts --production",
+    "watch": "bun run esbuild.config.ts --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.1",
+    "typescript": "^5.3.3"
+  }
+}
+

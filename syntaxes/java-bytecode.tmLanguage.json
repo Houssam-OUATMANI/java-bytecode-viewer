@@ -1,0 +1,149 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Java Bytecode",
+  "scopeName": "source.java-bytecode",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#constant-pool" },
+    { "include": "#section-headers" },
+    { "include": "#line-numbers-and-offsets" },
+    { "include": "#instructions" },
+    { "include": "#access-flags" },
+    { "include": "#keywords" },
+    { "include": "#descriptors" },
+    { "include": "#numbers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.java-bytecode",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.java-bytecode",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.java-bytecode",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.java-bytecode",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "constant-pool": {
+      "patterns": [
+        {
+          "match": "^\\s*(#\\d+)\\s*=\\s*([A-Za-z]+)\\b",
+          "captures": {
+            "1": { "name": "variable.other.constant-pool.index.java-bytecode" },
+            "2": { "name": "support.type.constant-pool.tag.java-bytecode" }
+          }
+        },
+        {
+          "name": "variable.other.constant-pool.ref.java-bytecode",
+          "match": "#\\d+\\b"
+        }
+      ]
+    },
+    "section-headers": {
+      "patterns": [
+        {
+          "name": "keyword.control.header.java-bytecode",
+          "match": "^\\s*(Constant pool|Code|LineNumberTable|LocalVariableTable|LocalVariableTypeTable|StackMapTable|Exceptions|RuntimeVisibleAnnotations|RuntimeInvisibleAnnotations|BootstrapMethods|InnerClasses|SourceFile|Signature|NestMembers|NestHost|PermittedSubclasses):"
+        },
+        {
+          "name": "meta.classfile.header.java-bytecode",
+          "match": "^(Classfile|Last modified|SHA-256 checksum|Compiled from|minor version|major version|flags):"
+        }
+      ]
+    },
+    "line-numbers-and-offsets": {
+      "patterns": [
+        {
+          "match": "^\\s*(\\d+):",
+          "captures": {
+            "1": { "name": "constant.numeric.offset.java-bytecode" }
+          }
+        },
+        {
+          "match": "\\b(line)\\s+(\\d+):\\s*(\\d+)",
+          "captures": {
+            "1": { "name": "keyword.other.java-bytecode" },
+            "2": { "name": "constant.numeric.line.java-bytecode" },
+            "3": { "name": "constant.numeric.offset.java-bytecode" }
+          }
+        }
+      ]
+    },
+    "instructions": {
+      "patterns": [
+        {
+          "name": "keyword.operator.opcode.java-bytecode",
+          "match": "\\b(nop|aconst_null|iconst_m1|iconst_[0-5]|lconst_[01]|fconst_[0-2]|dconst_[01]|bipush|sipush|ldc|ldc_w|ldc2_w|iload|lload|fload|dload|aload|iload_[0-3]|lload_[0-3]|fload_[0-3]|dload_[0-3]|aload_[0-3]|iaload|laload|faload|daload|aaload|baload|caload|saload|istore|lstore|fstore|dstore|astore|istore_[0-3]|lstore_[0-3]|fstore_[0-3]|dstore_[0-3]|astore_[0-3]|iastore|lastore|fastore|dastore|aastore|bastore|castore|sastore|pop|pop2|dup|dup_x1|dup_x2|dup2|dup2_x1|dup2_x2|swap|iadd|ladd|fadd|dadd|isub|lsub|fsub|dsub|imul|lmul|fmul|dmul|idiv|ldiv|fdiv|ddiv|irem|lrem|frem|drem|ineg|lneg|fneg|dneg|ishl|lshl|ishr|lshr|iushr|lushr|iand|land|ior|lor|ixor|lxor|iinc|i2l|i2f|i2d|l2i|l2f|l2d|f2i|f2l|f2d|d2i|d2l|d2f|i2b|i2c|i2s|lcmp|fcmpl|fcmpg|dcmpl|dcmpg|ifeq|ifne|iflt|ifge|ifgt|ifle|if_icmpeq|if_icmpne|if_icmplt|if_icmpge|if_icmpgt|if_icmple|if_acmpeq|if_acmpne|goto|jsr|ret|tableswitch|lookupswitch|ireturn|lreturn|freturn|dreturn|areturn|return|getstatic|putstatic|getfield|putfield|invokevirtual|invokespecial|invokestatic|invokeinterface|invokedynamic|new|newarray|anewarray|arraylength|athrow|checkcast|instanceof|monitorenter|monitorexit|wide|multianewarray|ifnull|ifnonnull|goto_w|jsr_w)\\b"
+        }
+      ]
+    },
+    "access-flags": {
+      "patterns": [
+        {
+          "name": "storage.modifier.flag.java-bytecode",
+          "match": "\\b(ACC_PUBLIC|ACC_PRIVATE|ACC_PROTECTED|ACC_STATIC|ACC_FINAL|ACC_SUPER|ACC_SYNCHRONIZED|ACC_VOLATILE|ACC_BRIDGE|ACC_TRANSIENT|ACC_VARARGS|ACC_NATIVE|ACC_INTERFACE|ACC_ABSTRACT|ACC_STRICT|ACC_SYNTHETIC|ACC_ANNOTATION|ACC_ENUM|ACC_MANDATED|ACC_MODULE)\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "storage.modifier.java-bytecode",
+          "match": "\\b(public|private|protected|static|final|abstract|synchronized|native|transient|volatile|strictfp)\\b"
+        },
+        {
+          "name": "storage.type.java-bytecode",
+          "match": "\\b(class|interface|enum|record|extends|implements|throws)\\b"
+        },
+        {
+          "name": "keyword.other.details.java-bytecode",
+          "match": "\\b(descriptor|flags|stack|locals|args_size|Method|Field|InterfaceMethod|InvokeDynamic)\\b"
+        }
+      ]
+    },
+    "descriptors": {
+      "patterns": [
+        {
+          "name": "entity.name.type.class.java-bytecode",
+          "match": "L([a-zA-Z_$][a-zA-Z0-9_$]*/)*[a-zA-Z_$][a-zA-Z0-9_$]*;"
+        },
+        {
+          "name": "entity.name.type.primitive.java-bytecode",
+          "match": "\\b(void|boolean|byte|char|short|int|long|float|double)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.java-bytecode",
+          "match": "\\b0x[0-9a-fA-F]+\\b"
+        },
+        {
+          "name": "constant.numeric.decimal.java-bytecode",
+          "match": "\\b-?\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    }
+  }
+}
+
