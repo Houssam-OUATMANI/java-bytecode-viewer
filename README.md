@@ -5,32 +5,32 @@
 [![Engine](https://img.shields.io/badge/VS%20Code-%3E%3D%201.85.0-brightgreen.svg)](https://code.visualstudio.com)
 [![GitHub Stars](https://img.shields.io/github/stars/Houssam-OUATMANI/java-bytecode-viewer?style=social)](https://github.com/Houssam-OUATMANI/java-bytecode-viewer)
 
-> Inspect, analyze, and navigate Java compiled bytecode directly inside VS Code — with the fluidity and comfort of IntelliJ IDEA Ultimate.
+> View and analyze Java compiled bytecode directly inside VS Code
 
 ![Java Bytecode Viewer Showcase](media/showcase-java-bytecode.png)
 
 ---
 
-## ✨ Features
+## Features
 
-### 🔍 1. Activity Bar Bytecode Explorer
+###  1. Activity Bar Bytecode Explorer
 * Dedicated activity bar icon with a clean, hierarchical tree view of all compiled `.class` files.
 * **Intelligent Package Compacting**: Automatically collapses single-child packages (`com.example.service` instead of 3 deep folders).
 * **Inner & Anonymous Classes Nesting**: Nested classes (`Outer$Inner.class`, `Outer$1.class`) are neatly organized under their outer class with child badges.
 * **Multi-Module Support**: Seamlessly discovers build directories across multi-module Maven (`target/classes`), Gradle (`build/classes`), and Eclipse/VS Code (`bin`).
 * **Instant Hot-Reload**: A built-in file watcher detects re-compilations (`mvn compile`, `./gradlew build`) and updates both the tree and any open bytecode viewer in real time.
 
-### 🎯 2. Bi-directional Code $\leftrightarrow$ Bytecode Cursor Sync
+###  2. Bi-directional Code $\leftrightarrow$ Bytecode Cursor Sync
 * Open any `.java` source file and click the **"Java: Show Bytecode"** button in the editor title bar to open its bytecode side-by-side (*Split View*).
 * **Live Cursor Tracking**: As you navigate or click lines in your `.java` file, the bytecode editor automatically scrolls and selects the exact corresponding JVM bytecode instruction!
 
-### 🔘 3. One-Click Toolbar Toggles
+###  3. One-Click Toolbar Toggles
 No need to dig into configuration files to switch views. Three interactive toggles sit directly in the bytecode editor title bar:
 * **Toggle Verbose (Constant Pool)** (`$(list-tree)`) : Instantly hide or show the constant pool table and stack map frames to focus purely on method instructions.
 * **Toggle Private Members** (`$(eye)`) : Toggle visibility of private methods and fields (`-p`).
 * **Toggle Line Number Tables** (`$(list-ordered)`) : Toggle `LineNumberTable` and `LocalVariableTable` debug blocks (`-l`).
 
-### 📑 4. Document Outline & Breadcrumbs Navigation
+###  4. Document Outline & Breadcrumbs Navigation
 * Full integration with VS Code's **Outline** panel and **Breadcrumbs**.
 * Instantly jump between:
   * The `Constant Pool` table
@@ -38,17 +38,17 @@ No need to dig into configuration files to switch views. Three interactive toggl
   * Methods (`main`, getters, business logic)
   * Fields and constants
 
-### 🔗 5. Interactive Constant Pool Hyperlinks
+###  5. Interactive Constant Pool Hyperlinks
 * Every `#index` reference in the bytecode or constant pool (e.g. `invokevirtual #15 // Method ...`) is rendered as an interactive hyperlink.
 * `Ctrl + Click` (or click) on `#15` to jump straight to its declaration line in the Constant Pool!
 
-### ⚡ 6. Zero-Config & Lightning Fast
+###  6. Zero-Config & Lightning Fast
 * **Auto-detects JDK**: Scans `JAVA_HOME`, `PATH`, and standard installation paths on Windows, macOS, and Linux (JDK 8 up to Java 25+).
 * **Smart Memory Cache**: Avoids re-invoking JVM processes on tab switches by caching disassemblies with file modification timestamps (`mtime`).
 
 ---
 
-## ⚙️ Configuration
+##  Configuration
 
 Customize the extension behavior via your VS Code Settings (`Ctrl+,` / `Cmd+,` and search for `Java Bytecode`):
 
@@ -63,7 +63,7 @@ Customize the extension behavior via your VS Code Settings (`Ctrl+,` / `Cmd+,` a
 
 ---
 
-## ⌨️ Commands
+##  Commands
 
 | Command | Title | Context |
 | :--- | :--- | :--- |
@@ -75,7 +75,7 @@ Customize the extension behavior via your VS Code Settings (`Ctrl+,` / `Cmd+,` a
 
 ---
 
-## 🛠️ Building & Contributing
+##  Building & Contributing
 
 The extension is bundled with [Bun](https://bun.sh) and [esbuild](https://esbuild.github.io) for near-instant builds (< 50ms):
 
@@ -97,6 +97,6 @@ Press **F5** in VS Code to launch the Extension Development Host and test your c
 
 ---
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License.
