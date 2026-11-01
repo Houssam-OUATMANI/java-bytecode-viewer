@@ -3,7 +3,20 @@
   "displayName": "Java Bytecode Viewer",
   "description": "View and analyze Java compiled bytecode directly inside VS Code like IntelliJ IDEA",
   "version": "0.2.0",
-  "publisher": "local",
+  "publisher": "Houssam-OUATMANI",
+  "author": {
+    "name": "Houssam OUATMANI"
+  },
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Houssam-OUATMANI/java-bytecode-viewer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Houssam-OUATMANI/java-bytecode-viewer/issues"
+  },
+  "homepage": "https://github.com/Houssam-OUATMANI/java-bytecode-viewer#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -16,7 +29,10 @@
     "bytecode",
     "javap",
     "jvm",
-    "disassembler"
+    "disassembler",
+    "classfile",
+    "intellij",
+    "decompilation"
   ],
   "activationEvents": [
     "workspaceContains:**/*.java",

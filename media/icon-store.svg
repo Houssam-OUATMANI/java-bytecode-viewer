@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Background rounded squircle clip -->
+    <clipPath id="squircle">
+      <rect x="16" y="16" width="224" height="224" rx="52" />
+    </clipPath>
+
+    <!-- JetBrains style vibrant gradient layers -->
+    <linearGradient id="gBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#087CFA" />
+      <stop offset="100%" stop-color="#21D4FD" />
+    </linearGradient>
+
+    <linearGradient id="gPurple" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#B800FF" />
+      <stop offset="100%" stop-color="#FC007A" />
+    </linearGradient>
+
+    <linearGradient id="gDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#27282C" />
+      <stop offset="100%" stop-color="#19191C" />
+    </linearGradient>
+
+    <linearGradient id="gAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#21D4FD" />
+      <stop offset="50%" stop-color="#B800FF" />
+      <stop offset="100%" stop-color="#FC007A" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer squircle frame -->
+  <g clip-path="url(#squircle)">
+    <!-- Base dark background -->
+    <rect x="16" y="16" width="224" height="224" fill="url(#gDark)" />
+
+    <!-- Vibrant geometric ribbon layer 1 (Purple/Pink glow) -->
+    <path d="M-10 180 L140 30 L220 80 L90 260 Z" fill="url(#gPurple)" opacity="0.9" />
+
+    <!-- Vibrant geometric ribbon layer 2 (Cyan/Blue fold) -->
+    <path d="M60 270 L210 110 L260 170 L140 280 Z" fill="url(#gBlue)" opacity="0.95" />
+
+    <!-- High-tech binary backdrop watermark -->
+    <g font-family="Consolas, 'JetBrains Mono', monospace" font-size="13" font-weight="bold" fill="#FFFFFF" opacity="0.12">
+      <text x="32" y="52">01001010 01100001</text>
+      <text x="32" y="70">01110110 01100001</text>
+      <text x="32" y="88">01000010 01111001</text>
+      <text x="32" y="106">01110100 01100101</text>
+      <text x="32" y="210">CAFEBABE 0003002D</text>
+      <text x="32" y="228">ACC_PUBLIC ACC_SUPER</text>
+    </g>
+
+    <!-- Center JetBrains style product badge -->
+    <rect x="52" y="52" width="152" height="152" rx="20" fill="#1E1F22" stroke="#313438" stroke-width="2.5" />
+
+    <!-- Inner binary pattern "01 10" in subtle cyan/magenta -->
+    <g font-family="Consolas, 'JetBrains Mono', monospace" font-weight="900" font-size="18" fill="#21D4FD" opacity="0.75">
+      <text x="68" y="84">01</text>
+    </g>
+    <g font-family="Consolas, 'JetBrains Mono', monospace" font-weight="900" font-size="18" fill="#FC007A" opacity="0.75">
+      <text x="166" y="84">10</text>
+    </g>
+
+    <!-- Big Bold Product Code "BC" (ByteCode) -->
+    <text x="128" y="146" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'JetBrains Mono', sans-serif" font-weight="900" font-size="64" fill="#FFFFFF" text-anchor="middle" letter-spacing="-2">BC</text>
+
+    <!-- JetBrains signature bottom accent bar -->
+    <rect x="68" y="168" width="56" height="7" rx="3.5" fill="url(#gAccent)" />
+    <!-- Terminal cursor square -->
+    <rect x="132" y="168" width="12" height="7" rx="2" fill="#FFFFFF" opacity="0.8" />
+  </g>
+</svg>
+
