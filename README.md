@@ -7,6 +7,8 @@
 
 > Inspect, analyze, and navigate Java compiled bytecode directly inside VS Code — with the fluidity and comfort of IntelliJ IDEA Ultimate.
 
+![Java Bytecode Viewer Showcase](media/showcase-java-bytecode.png)
+
 ---
 
 ## ✨ Features

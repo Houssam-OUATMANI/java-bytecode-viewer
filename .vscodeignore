@@ -1,1 +1,11 @@
-*.vsix 
+.vscode/**
+.vscode-test/**
+src/**
+tsconfig.json
+esbuild.config.ts
+bun.lock
+node_modules/**
+*.vsix
+.git/**
+.gitignore
+showcase-java-bytecode.png
