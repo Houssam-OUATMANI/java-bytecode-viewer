@@ -56,10 +56,30 @@ export function activate(context: vscode.ExtensionContext) {
   };
 
   // Helper to toggle a configuration boolean and refresh current bytecode view
-  const toggleSetting = async (key: string, name: string) => {
+  const toggleSetting = async (key: 'verbose' | 'showPrivateMembers' | 'showLineAndLocalVariableTables', name: string) => {
     const config = vscode.workspace.getConfiguration('javaBytecode');
     const current = config.get<boolean>(key, true);
-    await config.update(key, !current, vscode.ConfigurationTarget.Global);
+    let target = vscode.ConfigurationTarget.Workspace;
+
+    if (!vscode.workspace.workspaceFolders?.length) {
+      const choice = await vscode.window.showWarningMessage(
+        'Aucun espace de travail ouvert. Voulez-vous modifier ce réglage globalement ?',
+        { modal: true },
+        'Modifier globalement'
+      );
+      if (choice !== 'Modifier globalement') {
+        return;
+      }
+      target = vscode.ConfigurationTarget.Global;
+    }
+
+    try {
+      await config.update(key, !current, target);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Impossible de modifier le réglage « ${name} » : ${message}`);
+      return;
+    }
 
     JavapRunner.clearCache();
 

@@ -202,6 +202,7 @@
     "build": "bun run esbuild.config.ts",
     "build:prod": "bun run esbuild.config.ts --production",
     "watch": "bun run esbuild.config.ts --watch",
+    "test": "bun run src/utils/bytecodeLineMapper.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

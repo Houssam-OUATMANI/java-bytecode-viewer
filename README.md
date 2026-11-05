@@ -52,6 +52,8 @@ No need to dig into configuration files to switch views. Three interactive toggl
 
 Customize the extension behavior via your VS Code Settings (`Ctrl+,` / `Cmd+,` and search for `Java Bytecode`):
 
+The explorer uses `javaBytecode.outputDirectories` to discover compiled classes. Toolbar toggles are saved to the current workspace; if no workspace is open, the extension asks before changing a global setting.
+
 | Setting | Default | Description |
 | :--- | :--- | :--- |
 | `javaBytecode.javapPath` | `""` | Custom path to the `javap` executable. If empty, auto-detection is used. |
@@ -89,7 +91,10 @@ bun run build
 # 3. Watch mode during development
 bun run watch
 
-# 4. Package VSIX for distribution
+# 4. Run focused tests
+bun run test
+
+# 5. Package VSIX for distribution
 bunx vsce package
 ```
 

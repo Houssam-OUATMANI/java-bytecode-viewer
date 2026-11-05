@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 export class BytecodeLineMapper {
   /**
@@ -6,43 +6,60 @@ export class BytecodeLineMapper {
    */
   public static findBytecodeLineForSourceLine(bytecodeDoc: vscode.TextDocument, sourceLine: number): number | null {
     const lineCount = bytecodeDoc.lineCount;
-
-    // Pattern for LineNumberTable entries: "line 3: 0"
     const lineTableEntryRegex = /line\s+(\d+):\s*(\d+)/g;
-
-    let bestBytecodeOffset: number | null = null;
     let closestSourceLineDiff = Infinity;
     let foundLineIndex: number | null = null;
 
-    // Find closest source line in LineNumberTable
-    for (let i = 0; i < lineCount; i++) {
-      const text = bytecodeDoc.lineAt(i).text;
-      let match: RegExpExecArray | null;
-      while ((match = lineTableEntryRegex.exec(text)) !== null) {
-        const tableSourceLine = parseInt(match[1], 10);
-        const bytecodeOffset = parseInt(match[2], 10);
+    const isMethodDeclaration = (text: string) =>
+      text.startsWith('  ') &&
+      !text.startsWith('    ') &&
+      ((text.trim().includes('(') && text.trim().endsWith(';')) || text.trim() === 'static {};');
 
-        const diff = Math.abs(tableSourceLine - sourceLine);
-        if (tableSourceLine <= sourceLine && diff < closestSourceLineDiff) {
-          closestSourceLineDiff = diff;
-          bestBytecodeOffset = bytecodeOffset;
+    for (let i = 0; i < lineCount; i++) {
+      if (!isMethodDeclaration(bytecodeDoc.lineAt(i).text)) {
+        continue;
+      }
+
+      let methodEnd = i + 1;
+      while (methodEnd < lineCount) {
+        const text = bytecodeDoc.lineAt(methodEnd).text;
+        if (isMethodDeclaration(text) || text.trim() === '}') {
+          break;
+        }
+        methodEnd++;
+      }
+
+      const instructions = new Map<number, number>();
+      const lineEntries: Array<{ sourceLine: number; offset: number }> = [];
+
+      for (let j = i + 1; j < methodEnd; j++) {
+        const text = bytecodeDoc.lineAt(j).text;
+        const instructionMatch = text.match(/^\s*(\d+):/);
+        if (instructionMatch) {
+          instructions.set(Number(instructionMatch[1]), j);
+        }
+
+        lineTableEntryRegex.lastIndex = 0;
+        let match: RegExpExecArray | null;
+        while ((match = lineTableEntryRegex.exec(text)) !== null) {
+          lineEntries.push({ sourceLine: Number(match[1]), offset: Number(match[2]) });
         }
       }
-    }
 
-    if (bestBytecodeOffset === null) {
-      return null;
-    }
-
-    // Now locate the instruction offset line (e.g. "   0: aload_0" or "  12: goto")
-    const offsetRegex = new RegExp(`^\\s*${bestBytecodeOffset}:`);
-    for (let i = 0; i < lineCount; i++) {
-      if (offsetRegex.test(bytecodeDoc.lineAt(i).text)) {
-        return i;
+      for (const entry of lineEntries) {
+        const diff = sourceLine - entry.sourceLine;
+        if (diff >= 0 && diff < closestSourceLineDiff) {
+          const instructionLine = instructions.get(entry.offset);
+          if (instructionLine !== undefined) {
+            closestSourceLineDiff = diff;
+            foundLineIndex = instructionLine;
+          }
+        }
       }
+
+      i = methodEnd - 1;
     }
 
-    return null;
+    return foundLineIndex;
   }
 }
-

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Improved
+- The class explorer now uses the configured output-directory globs and no longer truncates discovery at 500 class files.
+- Package discovery now uses asynchronous, cached directory scans.
+- Source-to-bytecode cursor synchronization resolves instruction offsets within their containing method.
+- Toolbar toggles now save to workspace settings, with confirmation required before changing global settings when no workspace is open.
+
+### Tests
+- Added focused tests for method-scoped bytecode line mapping.
+
 ## [0.2.0] - 2026-11-01
 
 ### Added
@@ -38,4 +49,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic JDK auto-detection (support for JDK 8 up to Java 25+).
 - Real-time file system watcher on `**/*.class` files.
 - "Java: Show Bytecode" editor title button for split-view inspection.
-

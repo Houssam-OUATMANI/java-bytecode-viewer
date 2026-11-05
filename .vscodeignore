@@ -8,4 +8,4 @@ node_modules/**
 *.vsix
 .git/**
 .gitignore
-showcase-java-bytecode.png
+media/showcase-java-bytecode.png

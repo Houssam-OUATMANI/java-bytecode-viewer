@@ -59,7 +59,9 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
   private _onDidChangeTreeData = new vscode.EventEmitter<BytecodeTreeItem | undefined | null | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private watchers: vscode.FileSystemWatcher[] = [];
+  private watchers: vscode.Disposable[] = [];
+  private rootDirectoriesCache: BytecodeTreeItem[] | undefined;
+  private classFilePresenceCache = new Map<string, Promise<boolean>>();
 
   constructor() {
     this.setupWatcher();
@@ -67,6 +69,8 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
 
   public refresh(): void {
     JavapRunner.clearCache();
+    this.rootDirectoriesCache = undefined;
+    this.classFilePresenceCache.clear();
     this._onDidChangeTreeData.fire();
   }
 
@@ -84,6 +88,14 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
       vscode.commands.executeCommand('javaBytecode.notifyClassChanged', bytecodeUri);
     });
     this.watchers.push(watcher);
+    this.watchers.push(
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.refresh()),
+      vscode.workspace.onDidChangeConfiguration((event) => {
+        if (event.affectsConfiguration('javaBytecode.outputDirectories')) {
+          this.refresh();
+        }
+      })
+    );
   }
 
   public getTreeItem(element: BytecodeTreeItem): vscode.TreeItem {
@@ -128,18 +140,43 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
   }
 
   private async getRootDirectories(): Promise<BytecodeTreeItem[]> {
+    if (this.rootDirectoriesCache) {
+      return this.rootDirectoriesCache;
+    }
+
     const items: BytecodeTreeItem[] = [];
     const foundDirs = new Set<string>();
+    const configuredOutputDirectories: unknown = vscode.workspace
+      .getConfiguration('javaBytecode')
+      .get('outputDirectories', [
+        '**/target/classes',
+        '**/target/test-classes',
+        '**/build/classes/java/main',
+        '**/build/classes/java/test',
+        '**/build/classes/kotlin/main',
+        '**/bin'
+      ]);
+    const outputDirectories = Array.isArray(configuredOutputDirectories)
+      ? configuredOutputDirectories.filter(
+          (directory): directory is string => typeof directory === 'string' && directory.trim() !== ''
+        )
+      : [];
 
     for (const folder of vscode.workspace.workspaceFolders || []) {
-      const classUris = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(folder, '**/*.class'),
-        '**/node_modules/**',
-        500
+      const searches = await Promise.all(
+        outputDirectories.map((directory) => {
+          const normalizedDirectory = directory.replace(/\\/g, '/').replace(/\/+$/, '');
+          return vscode.workspace.findFiles(
+            new vscode.RelativePattern(folder, `${normalizedDirectory}/**/*.class`),
+            '**/node_modules/**'
+          );
+        })
       );
+      const classUris = [...new Map(searches.flat().map((uri) => [uri.fsPath, uri])).values()];
+      const folderItems: BytecodeTreeItem[] = [];
 
       for (const uri of classUris) {
-        const rootDir = this.extractOutputRoot(uri.fsPath, folder.uri.fsPath);
+        const rootDir = this.extractOutputRoot(uri.fsPath, folder.uri.fsPath, outputDirectories);
         if (rootDir && !foundDirs.has(rootDir)) {
           foundDirs.add(rootDir);
           let relativeLabel = path.relative(folder.uri.fsPath, rootDir).replace(/\\/g, '/');
@@ -147,7 +184,7 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
             relativeLabel = path.basename(folder.uri.fsPath);
           }
 
-          items.push(
+          folderItems.push(
             new BytecodeTreeItem(
               relativeLabel,
               vscode.TreeItemCollapsibleState.Expanded,
@@ -159,9 +196,8 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
         }
       }
 
-      // Fallback if no known output pattern matched
-      if (items.length === 0 && classUris.length > 0) {
-        items.push(
+      if (folderItems.length === 0 && classUris.length > 0) {
+        folderItems.push(
           new BytecodeTreeItem(
             path.basename(folder.uri.fsPath) + ' (classes)',
             vscode.TreeItemCollapsibleState.Expanded,
@@ -171,33 +207,103 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
           )
         );
       }
+      items.push(...folderItems);
     }
 
     // Sort roots alphabetically
     items.sort((a, b) => a.label.localeCompare(b.label));
+    this.rootDirectoriesCache = items;
     return items;
   }
 
-  private extractOutputRoot(classFilePath: string, workspacePath: string): string | null {
-    const normalizedClass = path.normalize(classFilePath);
+  private extractOutputRoot(classFilePath: string, workspacePath: string, outputDirectories: string[]): string | null {
+    const relativeClassPath = path.relative(workspacePath, classFilePath).replace(/\\/g, '/');
+    const directorySegments = relativeClassPath.split('/');
+    let bestRoot: string | null = null;
+    let bestDepth = -1;
+    const matchers = outputDirectories.map((directory) => this.globToRegExp(directory));
 
-    const patterns = [
-      path.join('target', 'classes'),
-      path.join('target', 'test-classes'),
-      path.join('build', 'classes', 'java', 'main'),
-      path.join('build', 'classes', 'java', 'test'),
-      path.join('build', 'classes', 'kotlin', 'main'),
-      path.join('bin')
-    ];
-
-    for (const pat of patterns) {
-      const idx = normalizedClass.lastIndexOf(pat);
-      if (idx !== -1) {
-        return normalizedClass.slice(0, idx + pat.length);
+    for (const matcher of matchers) {
+      for (let i = 1; i < directorySegments.length; i++) {
+        const relativeDirectory = directorySegments.slice(0, i).join('/');
+        if (matcher.test(relativeDirectory) && i > bestDepth) {
+          bestRoot = path.join(workspacePath, ...directorySegments.slice(0, i));
+          bestDepth = i;
+        }
       }
     }
 
-    return null;
+    return bestRoot;
+  }
+
+  private globToRegExp(glob: string): RegExp {
+    const normalized = glob.replace(/\\/g, '/').replace(/\/+$/, '').replace(/^\.\//, '');
+    const toExpression = (pattern: string): string => {
+      let expression = '';
+
+      for (let i = 0; i < pattern.length; i++) {
+        const character = pattern[i];
+        if (character === '*' && pattern[i + 1] === '*') {
+          if (pattern[i + 2] === '/') {
+            expression += '(?:.*/)?';
+            i += 2;
+          } else {
+            expression += '.*';
+            i++;
+          }
+        } else if (character === '*') {
+          expression += '[^/]*';
+        } else if (character === '?') {
+          expression += '[^/]';
+        } else if (character === '{') {
+          let depth = 1;
+          let end = i + 1;
+          for (; end < pattern.length && depth > 0; end++) {
+            if (pattern[end] === '{') {
+              depth++;
+            } else if (pattern[end] === '}') {
+              depth--;
+            }
+          }
+
+          if (depth === 0) {
+            const alternatives: string[] = [];
+            let start = i + 1;
+            let nestedDepth = 0;
+            for (let j = start; j < end - 1; j++) {
+              if (pattern[j] === '{') {
+                nestedDepth++;
+              } else if (pattern[j] === '}') {
+                nestedDepth--;
+              } else if (pattern[j] === ',' && nestedDepth === 0) {
+                alternatives.push(pattern.slice(start, j));
+                start = j + 1;
+              }
+            }
+            alternatives.push(pattern.slice(start, end - 1));
+            expression += `(?:${alternatives.map(toExpression).join('|')})`;
+            i = end - 1;
+          } else {
+            expression += '\\{';
+          }
+        } else if (character === '[') {
+          const end = pattern.indexOf(']', i + 1);
+          if (end !== -1) {
+            const characterClass = pattern.slice(i + 1, end).replace(/^!/, '^');
+            expression += `[${characterClass}]`;
+            i = end;
+          } else {
+            expression += '\\[';
+          }
+        } else {
+          expression += character.replace(/[|\\}()[\]^$+?.]/g, '\\$&');
+        }
+      }
+
+      return expression;
+    };
+
+    return new RegExp(`^${toExpression(normalized)}$`);
   }
 
   private async getPackagesOrClassesInDir(dirPath: string, rootPath: string): Promise<BytecodeTreeItem[]> {
@@ -214,8 +320,8 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
         const full = path.join(dirPath, entry.name);
 
         if (entry.isDirectory()) {
-          if (this.containsClassFiles(full)) {
-            const { chainedLabel, chainedPath } = this.compactPackagePath(full, entry.name);
+          if (await this.containsClassFiles(full)) {
+            const { chainedLabel, chainedPath } = await this.compactPackagePath(full, entry.name);
             dirs.push(
               new BytecodeTreeItem(
                 chainedLabel,
@@ -299,30 +405,43 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
     }
   }
 
-  private containsClassFiles(dir: string): boolean {
-    try {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.class')) {
-          return true;
-        }
-        if (entry.isDirectory() && this.containsClassFiles(path.join(dir, entry.name))) {
-          return true;
-        }
-      }
-    } catch {
-      return false;
+  private containsClassFiles(dir: string): Promise<boolean> {
+    const cached = this.classFilePresenceCache.get(dir);
+    if (cached) {
+      return cached;
     }
-    return false;
+
+    const result = (async () => {
+      try {
+        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isFile() && entry.name.endsWith('.class')) {
+            return true;
+          }
+          if (entry.isDirectory() && await this.containsClassFiles(path.join(dir, entry.name))) {
+            return true;
+          }
+        }
+      } catch {
+        return false;
+      }
+      return false;
+    })();
+
+    this.classFilePresenceCache.set(dir, result);
+    return result;
   }
 
-  private compactPackagePath(currentDir: string, currentLabel: string): { chainedLabel: string; chainedPath: string } {
+  private async compactPackagePath(
+    currentDir: string,
+    currentLabel: string
+  ): Promise<{ chainedLabel: string; chainedPath: string }> {
     let nextDir = currentDir;
     let combinedLabel = currentLabel;
 
     while (true) {
       try {
-        const entries = fs.readdirSync(nextDir, { withFileTypes: true });
+        const entries = await fs.promises.readdir(nextDir, { withFileTypes: true });
         const subdirs = entries.filter((e) => e.isDirectory());
         const hasFiles = entries.some((e) => e.isFile());
 
