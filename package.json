@@ -2,7 +2,7 @@
   "name": "java-bytecode-viewer",
   "displayName": "Java Bytecode Viewer",
   "description": "View and analyze Java compiled bytecode directly inside VS Code like IntelliJ IDEA",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "publisher": "Houssam-OUATMANI",
   "author": {
     "name": "Houssam OUATMANI"

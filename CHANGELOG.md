@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+
+
+## [1.0.0] - 2026-11-05
 
 ### Improved
 - The class explorer now uses the configured output-directory globs and no longer truncates discovery at 500 class files.
