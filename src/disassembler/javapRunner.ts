@@ -7,6 +7,7 @@ export interface JavapOptions {
   verbose?: boolean;
   privateMembers?: boolean;
   lineAndLocalVars?: boolean;
+  signatures?: boolean;
 }
 
 interface CacheEntry {
@@ -33,8 +34,9 @@ export class JavapRunner {
     const verbose = overrideOptions?.verbose ?? config.get<boolean>('verbose', true);
     const privateMembers = overrideOptions?.privateMembers ?? config.get<boolean>('showPrivateMembers', true);
     const lineAndLocalVars = overrideOptions?.lineAndLocalVars ?? config.get<boolean>('showLineAndLocalVariableTables', true);
+    const signatures = overrideOptions?.signatures ?? config.get<boolean>('showInternalSignatures', false);
 
-    const optionsKey = `v:${verbose}|p:${privateMembers}|l:${lineAndLocalVars}`;
+    const optionsKey = `v:${verbose}|p:${privateMembers}|l:${lineAndLocalVars}|s:${signatures}`;
 
     // Check disk cache with mtime
     try {
@@ -59,6 +61,9 @@ export class JavapRunner {
     }
     if (lineAndLocalVars) {
       args.push('-l');
+    }
+    if (signatures) {
+      args.push('-s');
     }
 
     args.push(classFilePath);

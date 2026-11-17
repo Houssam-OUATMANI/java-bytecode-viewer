@@ -3,17 +3,26 @@ import { BytecodeDocumentProvider } from './providers/bytecodeDocumentProvider';
 import { ClassTreeDataProvider } from './providers/classTreeDataProvider';
 import { BytecodeSymbolProvider } from './providers/bytecodeSymbolProvider';
 import { BytecodeLinkProvider } from './providers/bytecodeLinkProvider';
+import { BytecodeHoverProvider } from './providers/bytecodeHoverProvider';
+import { BytecodeFoldingProvider } from './providers/bytecodeFoldingProvider';
+import { BytecodeDiffManager } from './providers/bytecodeDiffManager';
 import { ClassResolver } from './utils/classResolver';
 import { BytecodeLineMapper } from './utils/bytecodeLineMapper';
 import { JavapRunner } from './disassembler/javapRunner';
 
 export function activate(context: vscode.ExtensionContext) {
-  // 1. Register virtual document provider
+  // 1. Register virtual document providers
   const docProvider = new BytecodeDocumentProvider();
+  const diffProvider = new BytecodeDiffManager();
+
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(
       BytecodeDocumentProvider.SCHEME,
       docProvider
+    ),
+    vscode.workspace.registerTextDocumentContentProvider(
+      BytecodeDiffManager.SNAPSHOT_SCHEME,
+      diffProvider
     )
   );
 
@@ -27,16 +36,18 @@ export function activate(context: vscode.ExtensionContext) {
     dispose: () => treeDataProvider.dispose()
   });
 
-  // 3. Register Language Providers (Outline Symbols & Clickable Links)
+  // 3. Register Language Providers
+  const bytecodeSelector: vscode.DocumentSelector = [
+    { language: 'java-bytecode' },
+    { scheme: BytecodeDocumentProvider.SCHEME },
+    { scheme: BytecodeDiffManager.SNAPSHOT_SCHEME }
+  ];
+
   context.subscriptions.push(
-    vscode.languages.registerDocumentSymbolProvider(
-      { language: 'java-bytecode' },
-      new BytecodeSymbolProvider()
-    ),
-    vscode.languages.registerDocumentLinkProvider(
-      { language: 'java-bytecode' },
-      new BytecodeLinkProvider()
-    )
+    vscode.languages.registerDocumentSymbolProvider(bytecodeSelector, new BytecodeSymbolProvider()),
+    vscode.languages.registerDocumentLinkProvider(bytecodeSelector, new BytecodeLinkProvider()),
+    vscode.languages.registerHoverProvider(bytecodeSelector, new BytecodeHoverProvider()),
+    vscode.languages.registerFoldingRangeProvider(bytecodeSelector, new BytecodeFoldingProvider())
   );
 
   // Helper function to open bytecode document
@@ -55,21 +66,37 @@ export function activate(context: vscode.ExtensionContext) {
     }
   };
 
+  // Helper to extract clean class file path from item or uri
+  const resolveClassFilePath = (itemOrPath: any): string | undefined => {
+    let classFilePath: string | undefined;
+    if (typeof itemOrPath === 'string') {
+      classFilePath = itemOrPath;
+    } else if (itemOrPath && typeof itemOrPath.fullPath === 'string') {
+      classFilePath = itemOrPath.fullPath;
+    } else if (itemOrPath && itemOrPath.fsPath) {
+      classFilePath = itemOrPath.fsPath;
+    } else if (vscode.window.activeTextEditor?.document.uri.scheme === BytecodeDocumentProvider.SCHEME) {
+      classFilePath = BytecodeDocumentProvider.getClassFilePathFromUri(
+        vscode.window.activeTextEditor.document.uri
+      );
+    }
+
+    if (classFilePath && classFilePath.endsWith('.javap')) {
+      classFilePath = classFilePath.slice(0, -6);
+    }
+    return classFilePath;
+  };
+
   // Helper to toggle a configuration boolean and refresh current bytecode view
-  const toggleSetting = async (key: 'verbose' | 'showPrivateMembers' | 'showLineAndLocalVariableTables', name: string) => {
+  const toggleSetting = async (
+    key: 'verbose' | 'showPrivateMembers' | 'showLineAndLocalVariableTables' | 'showInternalSignatures',
+    name: string
+  ) => {
     const config = vscode.workspace.getConfiguration('javaBytecode');
-    const current = config.get<boolean>(key, true);
+    const current = config.get<boolean>(key, false);
     let target = vscode.ConfigurationTarget.Workspace;
 
     if (!vscode.workspace.workspaceFolders?.length) {
-      const choice = await vscode.window.showWarningMessage(
-        'Aucun espace de travail ouvert. Voulez-vous modifier ce réglage globalement ?',
-        { modal: true },
-        'Modifier globalement'
-      );
-      if (choice !== 'Modifier globalement') {
-        return;
-      }
       target = vscode.ConfigurationTarget.Global;
     }
 
@@ -109,22 +136,42 @@ export function activate(context: vscode.ExtensionContext) {
       toggleSetting('showLineAndLocalVariableTables', 'Tables de lignes et variables');
     }),
 
+    vscode.commands.registerCommand('javaBytecode.toggleSignatures', () => {
+      toggleSetting('showInternalSignatures', 'Signatures internes (-s)');
+    }),
+
     vscode.commands.registerCommand('javaBytecode.openClassBytecode', async (itemOrPath: any) => {
-      let classFilePath: string | undefined;
-
-      if (typeof itemOrPath === 'string') {
-        classFilePath = itemOrPath;
-      } else if (itemOrPath && typeof itemOrPath.fullPath === 'string') {
-        classFilePath = itemOrPath.fullPath;
-      } else if (itemOrPath && itemOrPath.fsPath) {
-        classFilePath = itemOrPath.fsPath;
-      }
-
+      const classFilePath = resolveClassFilePath(itemOrPath);
       if (classFilePath) {
-        if (classFilePath.endsWith('.javap')) {
-          classFilePath = classFilePath.slice(0, -6);
-        }
         await openBytecode(classFilePath);
+      }
+    }),
+
+    vscode.commands.registerCommand('javaBytecode.takeSnapshot', async (itemOrPath: any) => {
+      const classFilePath = resolveClassFilePath(itemOrPath);
+      if (classFilePath) {
+        await BytecodeDiffManager.takeSnapshot(classFilePath);
+      }
+    }),
+
+    vscode.commands.registerCommand('javaBytecode.compareWithSnapshot', async (itemOrPath: any) => {
+      const classFilePath = resolveClassFilePath(itemOrPath);
+      if (classFilePath) {
+        await BytecodeDiffManager.compareWithSnapshot(classFilePath);
+      }
+    }),
+
+    vscode.commands.registerCommand('javaBytecode.selectForCompare', (itemOrPath: any) => {
+      const classFilePath = resolveClassFilePath(itemOrPath);
+      if (classFilePath) {
+        BytecodeDiffManager.selectForCompare(classFilePath);
+      }
+    }),
+
+    vscode.commands.registerCommand('javaBytecode.compareWithSelected', async (itemOrPath: any) => {
+      const classFilePath = resolveClassFilePath(itemOrPath);
+      if (classFilePath) {
+        await BytecodeDiffManager.compareWithSelected(classFilePath);
       }
     }),
 
@@ -151,7 +198,10 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // 5. Code <-> Bytecode Synchronisation on Cursor Movement
+  // 5. Bi-directional Code <-> Bytecode Synchronisation with Debounce
+  let syncDebounceTimer: NodeJS.Timeout | null = null;
+  let isInternalSyncing = false;
+
   context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((e) => {
       const config = vscode.workspace.getConfiguration('javaBytecode');
@@ -159,31 +209,88 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const sourceDoc = e.textEditor.document;
-      if (!sourceDoc.uri.fsPath.endsWith('.java')) {
+      if (isInternalSyncing) {
         return;
       }
 
-      // Find visible editor displaying the bytecode
-      const bytecodeEditor = vscode.window.visibleTextEditors.find(
-        (editor) => editor.document.uri.scheme === BytecodeDocumentProvider.SCHEME
-      );
-
-      if (!bytecodeEditor) {
-        return;
+      if (syncDebounceTimer) {
+        clearTimeout(syncDebounceTimer);
       }
 
-      const currentLine = e.selections[0].active.line + 1; // 1-based source line
-      const targetBytecodeLine = BytecodeLineMapper.findBytecodeLineForSourceLine(
-        bytecodeEditor.document,
-        currentLine
-      );
+      syncDebounceTimer = setTimeout(async () => {
+        const editorDoc = e.textEditor.document;
 
-      if (targetBytecodeLine !== null) {
-        const lineRange = bytecodeEditor.document.lineAt(targetBytecodeLine).range;
-        bytecodeEditor.revealRange(lineRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-        bytecodeEditor.selection = new vscode.Selection(lineRange.start, lineRange.end);
-      }
+        // Direction A: Java Source (.java) -> Bytecode View
+        if (editorDoc.uri.fsPath.endsWith('.java')) {
+          const bytecodeEditor = vscode.window.visibleTextEditors.find(
+            (editor) => editor.document.uri.scheme === BytecodeDocumentProvider.SCHEME
+          );
+
+          if (!bytecodeEditor) {
+            return;
+          }
+
+          const currentLine = e.selections[0].active.line + 1;
+          const targetBytecodeLine = BytecodeLineMapper.findBytecodeLineForSourceLine(
+            bytecodeEditor.document,
+            currentLine
+          );
+
+          if (targetBytecodeLine !== null) {
+            isInternalSyncing = true;
+            const lineRange = bytecodeEditor.document.lineAt(targetBytecodeLine).range;
+            bytecodeEditor.revealRange(lineRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+            bytecodeEditor.selection = new vscode.Selection(lineRange.start, lineRange.end);
+            setTimeout(() => {
+              isInternalSyncing = false;
+            }, 250);
+          }
+          return;
+        }
+
+        // Direction B: Bytecode View (javabytecode://) -> Java Source (.java)
+        if (editorDoc.uri.scheme === BytecodeDocumentProvider.SCHEME) {
+          const classFilePath = BytecodeDocumentProvider.getClassFilePathFromUri(editorDoc.uri);
+          const currentBytecodeLine = e.selections[0].active.line;
+
+          const sourceLine = BytecodeLineMapper.findSourceLineForBytecodeLine(
+            editorDoc,
+            currentBytecodeLine
+          );
+
+          if (sourceLine === null) {
+            return;
+          }
+
+          // Find if matching .java editor is already visible
+          let javaEditor = vscode.window.visibleTextEditors.find(
+            (ed) => ed.document.uri.fsPath.endsWith('.java')
+          );
+
+          if (!javaEditor) {
+            // Locate Java source file and open it beside if possible
+            const javaUri = await ClassResolver.findJavaFileForClass(classFilePath);
+            if (javaUri) {
+              const doc = await vscode.workspace.openTextDocument(javaUri);
+              javaEditor = await vscode.window.showTextDocument(doc, {
+                viewColumn: vscode.ViewColumn.One,
+                preserveFocus: true
+              });
+            }
+          }
+
+          if (javaEditor) {
+            isInternalSyncing = true;
+            const targetLineIndex = Math.max(0, Math.min(sourceLine - 1, javaEditor.document.lineCount - 1));
+            const lineRange = javaEditor.document.lineAt(targetLineIndex).range;
+            javaEditor.revealRange(lineRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+            javaEditor.selection = new vscode.Selection(lineRange.start, lineRange.end);
+            setTimeout(() => {
+              isInternalSyncing = false;
+            }, 250);
+          }
+        }
+      }, 120);
     })
   );
 }

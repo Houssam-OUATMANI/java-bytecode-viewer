@@ -2,7 +2,7 @@
   "name": "java-bytecode-viewer",
   "displayName": "Java Bytecode Viewer",
   "description": "View and analyze Java compiled bytecode directly inside VS Code like IntelliJ IDEA",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "publisher": "Houssam-OUATMANI",
   "author": {
     "name": "Houssam OUATMANI"
@@ -90,6 +90,31 @@
         "command": "javaBytecode.toggleLineNumbers",
         "title": "Toggle Line Number Tables",
         "icon": "$(list-ordered)"
+      },
+      {
+        "command": "javaBytecode.toggleSignatures",
+        "title": "Toggle Internal Type Signatures (-s)",
+        "icon": "$(symbol-variable)"
+      },
+      {
+        "command": "javaBytecode.takeSnapshot",
+        "title": "Take Bytecode Snapshot",
+        "icon": "$(camera)"
+      },
+      {
+        "command": "javaBytecode.compareWithSnapshot",
+        "title": "Compare with Bytecode Snapshot",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "javaBytecode.selectForCompare",
+        "title": "Select for Bytecode Compare",
+        "icon": "$(diff-single)"
+      },
+      {
+        "command": "javaBytecode.compareWithSelected",
+        "title": "Compare with Selected Class",
+        "icon": "$(diff-multiple)"
       }
     ],
     "menus": {
@@ -105,6 +130,26 @@
           "command": "javaBytecode.openClassBytecode",
           "when": "view == java-bytecode-explorer && (viewItem == classFile || viewItem == innerClassFile)",
           "group": "inline"
+        },
+        {
+          "command": "javaBytecode.selectForCompare",
+          "when": "view == java-bytecode-explorer && (viewItem == classFile || viewItem == innerClassFile)",
+          "group": "compare@1"
+        },
+        {
+          "command": "javaBytecode.compareWithSelected",
+          "when": "view == java-bytecode-explorer && (viewItem == classFile || viewItem == innerClassFile) && javaBytecode.hasCompareSelection",
+          "group": "compare@2"
+        },
+        {
+          "command": "javaBytecode.takeSnapshot",
+          "when": "view == java-bytecode-explorer && (viewItem == classFile || viewItem == innerClassFile)",
+          "group": "snapshot@1"
+        },
+        {
+          "command": "javaBytecode.compareWithSnapshot",
+          "when": "view == java-bytecode-explorer && (viewItem == classFile || viewItem == innerClassFile)",
+          "group": "snapshot@2"
         }
       ],
       "editor/title": [
@@ -127,6 +172,21 @@
           "command": "javaBytecode.toggleLineNumbers",
           "when": "resourceScheme == javabytecode",
           "group": "navigation@3"
+        },
+        {
+          "command": "javaBytecode.toggleSignatures",
+          "when": "resourceScheme == javabytecode",
+          "group": "navigation@4"
+        },
+        {
+          "command": "javaBytecode.takeSnapshot",
+          "when": "resourceScheme == javabytecode",
+          "group": "navigation@5"
+        },
+        {
+          "command": "javaBytecode.compareWithSnapshot",
+          "when": "resourceScheme == javabytecode",
+          "group": "navigation@6"
         }
       ]
     },
@@ -173,6 +233,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show line number and local variable tables (-l)."
+        },
+        "javaBytecode.showInternalSignatures": {
+          "type": "boolean",
+          "default": false,
+          "description": "Print internal type signatures (-s)."
         },
         "javaBytecode.autoSyncCursor": {
           "type": "boolean",

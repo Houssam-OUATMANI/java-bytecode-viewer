@@ -35,13 +35,22 @@ const bytecode = documentFromText(
   ].join('\n')
 );
 
+// Forward lookup: Source Line -> Bytecode Line
+assert.equal(BytecodeLineMapper.findBytecodeLineForSourceLine(bytecode, 10), 4);
 assert.equal(BytecodeLineMapper.findBytecodeLineForSourceLine(bytecode, 12), 5);
 assert.equal(BytecodeLineMapper.findBytecodeLineForSourceLine(bytecode, 21), 11);
 assert.equal(BytecodeLineMapper.findBytecodeLineForSourceLine(bytecode, 31), 16);
+
+// Reverse lookup: Bytecode Line -> Source Line
+assert.equal(BytecodeLineMapper.findSourceLineForBytecodeLine(bytecode, 4), 10);
+assert.equal(BytecodeLineMapper.findSourceLineForBytecodeLine(bytecode, 5), 11);
+assert.equal(BytecodeLineMapper.findSourceLineForBytecodeLine(bytecode, 11), 20);
+assert.equal(BytecodeLineMapper.findSourceLineForBytecodeLine(bytecode, 16), 30);
 
 const withoutLineTable = documentFromText(
   ['public class NoDebugInfo {', '  public void method();', '    Code:', '       0: return', '}'].join('\n')
 );
 assert.equal(BytecodeLineMapper.findBytecodeLineForSourceLine(withoutLineTable, 1), null);
+assert.equal(BytecodeLineMapper.findSourceLineForBytecodeLine(withoutLineTable, 3), null);
 
 console.log('BytecodeLineMapper tests passed.');

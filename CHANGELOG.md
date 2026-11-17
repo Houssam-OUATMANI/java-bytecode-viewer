@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [2.0.0] - 2026-11-17
+
+### Added
+- **Interactive JVM Opcode Tooltips (`HoverProvider`)**:
+  - Rich hover documentation for all standard JVM opcodes (loads, stores, math, control, invokes, references).
+  - Displays operand stack transitions (`..., val1, val2 → ..., result`), operands, and JVM specification summaries.
+  - Hover documentation for Constant Pool tags (`Methodref`, `Fieldref`, `InvokeDynamic`, etc.).
+- **Code Folding (`FoldingRangeProvider`)**:
+  - Fold and unfold the `Constant pool:` block, class body, individual methods, and debug blocks (`Code:`, `LineNumberTable:`, `LocalVariableTable:`, `StackMapTable:`).
+- **Bi-directional Cursor Sync with Debounce**:
+  - Clicking on a bytecode instruction scrolls and highlights the corresponding line in the `.java` source file.
+  - Smooth 120ms debounce and mutual loop protection preventing cursor jitter.
+- **Internal Type Signatures Toggle (`-s`)**:
+  - One-click toolbar toggle and setting `javaBytecode.showInternalSignatures` to inspect internal JVM type signatures (e.g. `(Ljava/lang/String;I)Z`).
+- **Bytecode Snapshot & Diff (`Compare with Snapshot`)**:
+  - Take a bytecode snapshot before code edits, recompile, and inspect differences in VS Code's side-by-side diff viewer.
+  - Compare any two `.class` files directly from the Class Explorer context menu (`Select for Compare` and `Compare with Selected`).
+
 ## [1.0.0] - 2026-11-05
 
 ### Improved
