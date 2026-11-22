@@ -154,6 +154,7 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
         '**/build/classes/java/main',
         '**/build/classes/java/test',
         '**/build/classes/kotlin/main',
+        '**/build/classes/kotlin/test',
         '**/bin'
       ]);
     const outputDirectories = Array.isArray(configuredOutputDirectories)
@@ -163,57 +164,137 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
       : [];
 
     for (const folder of vscode.workspace.workspaceFolders || []) {
-      const searches = await Promise.all(
-        outputDirectories.map((directory) => {
-          const normalizedDirectory = directory.replace(/\\/g, '/').replace(/\/+$/, '');
-          return vscode.workspace.findFiles(
-            new vscode.RelativePattern(folder, `${normalizedDirectory}/**/*.class`),
-            '**/node_modules/**'
-          );
-        })
-      );
-      const classUris = [...new Map(searches.flat().map((uri) => [uri.fsPath, uri])).values()];
-      const folderItems: BytecodeTreeItem[] = [];
+      const folderFsPath = folder.uri.fsPath;
 
-      for (const uri of classUris) {
-        const rootDir = this.extractOutputRoot(uri.fsPath, folder.uri.fsPath, outputDirectories);
-        if (rootDir && !foundDirs.has(rootDir)) {
-          foundDirs.add(rootDir);
-          let relativeLabel = path.relative(folder.uri.fsPath, rootDir).replace(/\\/g, '/');
+      // 1. Direct filesystem scan (discovers microservices, Gradle & Maven outputs immune to .gitignore)
+      const diskDirs = await this.discoverOutputDirectoriesOnDisk(folderFsPath);
+      for (const diskDir of diskDirs) {
+        if (!foundDirs.has(diskDir)) {
+          foundDirs.add(diskDir);
+          let relativeLabel = path.relative(folderFsPath, diskDir).replace(/\\/g, '/');
           if (!relativeLabel || relativeLabel === '.') {
-            relativeLabel = path.basename(folder.uri.fsPath);
+            relativeLabel = path.basename(folderFsPath);
           }
 
-          folderItems.push(
+          items.push(
             new BytecodeTreeItem(
               relativeLabel,
               vscode.TreeItemCollapsibleState.Expanded,
               TreeItemType.RootDirectory,
-              rootDir,
-              rootDir
+              diskDir,
+              diskDir
             )
           );
         }
       }
 
-      if (folderItems.length === 0 && classUris.length > 0) {
-        folderItems.push(
-          new BytecodeTreeItem(
-            path.basename(folder.uri.fsPath) + ' (classes)',
-            vscode.TreeItemCollapsibleState.Expanded,
-            TreeItemType.RootDirectory,
-            folder.uri.fsPath,
-            folder.uri.fsPath
-          )
+      // 2. Also run findFiles with exclude=null so .gitignore does NOT hide build/ or target/
+      try {
+        const searches = await Promise.all(
+          outputDirectories.map((directory) => {
+            const normalizedDirectory = directory.replace(/\\/g, '/').replace(/\/+$/, '');
+            return vscode.workspace.findFiles(
+              new vscode.RelativePattern(folder, `${normalizedDirectory}/**/*.class`),
+              null,
+              100
+            );
+          })
         );
+        const classUris = [...new Map(searches.flat().map((uri) => [uri.fsPath, uri])).values()];
+
+        for (const uri of classUris) {
+          const rootDir = this.extractOutputRoot(uri.fsPath, folderFsPath, outputDirectories);
+          if (rootDir && !foundDirs.has(rootDir)) {
+            foundDirs.add(rootDir);
+            let relativeLabel = path.relative(folderFsPath, rootDir).replace(/\\/g, '/');
+            if (!relativeLabel || relativeLabel === '.') {
+              relativeLabel = path.basename(folderFsPath);
+            }
+
+            items.push(
+              new BytecodeTreeItem(
+                relativeLabel,
+                vscode.TreeItemCollapsibleState.Expanded,
+                TreeItemType.RootDirectory,
+                rootDir,
+                rootDir
+              )
+            );
+          }
+        }
+      } catch {
+        // Continue if findFiles encounters an error
       }
-      items.push(...folderItems);
     }
 
     // Sort roots alphabetically
     items.sort((a, b) => a.label.localeCompare(b.label));
     this.rootDirectoriesCache = items;
     return items;
+  }
+
+  /**
+   * Fast disk scanner that discovers build and target output folders in the workspace,
+   * including root projects and nested microservices/submodules.
+   */
+  private async discoverOutputDirectoriesOnDisk(rootDir: string, depth = 0): Promise<string[]> {
+    if (depth > 4) {
+      return [];
+    }
+
+    const results: string[] = [];
+    try {
+      // Direct known candidates under rootDir
+      const directCandidates = [
+        path.join(rootDir, 'build', 'classes', 'java', 'main'),
+        path.join(rootDir, 'build', 'classes', 'java', 'test'),
+        path.join(rootDir, 'build', 'classes', 'kotlin', 'main'),
+        path.join(rootDir, 'build', 'classes', 'kotlin', 'test'),
+        path.join(rootDir, 'build', 'classes', 'groovy', 'main'),
+        path.join(rootDir, 'target', 'classes'),
+        path.join(rootDir, 'target', 'test-classes'),
+        path.join(rootDir, 'bin')
+      ];
+
+      for (const candidate of directCandidates) {
+        if (fs.existsSync(candidate) && (await this.containsClassFiles(candidate))) {
+          results.push(candidate);
+        }
+      }
+
+      // Scan subdirectories for multi-project / microservice structures
+      const entries = await fs.promises.readdir(rootDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) {
+          continue;
+        }
+
+        const name = entry.name;
+        // Skip irrelevant directories
+        if (
+          name.startsWith('.') ||
+          name === 'node_modules' ||
+          name === 'src' ||
+          name === 'build' ||
+          name === 'target' ||
+          name === 'bin' ||
+          name === 'tmp' ||
+          name === 'resources' ||
+          name === 'gradle' ||
+          name === 'generated'
+        ) {
+          continue;
+        }
+
+        const subDir = path.join(rootDir, name);
+        const subResults = await this.discoverOutputDirectoriesOnDisk(subDir, depth + 1);
+        results.push(...subResults);
+      }
+    } catch {
+      // Ignore directory access errors
+    }
+
+    return results;
   }
 
   private extractOutputRoot(classFilePath: string, workspacePath: string, outputDirectories: string[]): string | null {
@@ -418,7 +499,7 @@ export class ClassTreeDataProvider implements vscode.TreeDataProvider<BytecodeTr
           if (entry.isFile() && entry.name.endsWith('.class')) {
             return true;
           }
-          if (entry.isDirectory() && await this.containsClassFiles(path.join(dir, entry.name))) {
+          if (entry.isDirectory() && (await this.containsClassFiles(path.join(dir, entry.name)))) {
             return true;
           }
         }

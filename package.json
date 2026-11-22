@@ -39,6 +39,11 @@
     "workspaceContains:pom.xml",
     "workspaceContains:build.gradle",
     "workspaceContains:build.gradle.kts",
+    "workspaceContains:**/pom.xml",
+    "workspaceContains:**/build.gradle",
+    "workspaceContains:**/build.gradle.kts",
+    "workspaceContains:**/settings.gradle",
+    "workspaceContains:**/settings.gradle.kts",
     "onView:java-bytecode-explorer"
   ],
   "main": "./dist/extension.js",
@@ -255,6 +260,8 @@
             "**/build/classes/java/main",
             "**/build/classes/java/test",
             "**/build/classes/kotlin/main",
+            "**/build/classes/kotlin/test",
+            "**/build/classes/groovy/main",
             "**/bin"
           ],
           "description": "Glob patterns for directories containing compiled .class files."

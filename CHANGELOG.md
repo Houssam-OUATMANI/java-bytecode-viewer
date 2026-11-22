@@ -27,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Take a bytecode snapshot before code edits, recompile, and inspect differences in VS Code's side-by-side diff viewer.
   - Compare any two `.class` files directly from the Class Explorer context menu (`Select for Compare` and `Compare with Selected`).
 
+### Fixed
+- **Gradle & Spring Initializr Microservices Detection**:
+  - Fixed an issue where `.gitignore` containing `build/` prevented VS Code's `findFiles` from discovering compiled classes in `build/classes/java/main`.
+  - Added fast direct disk discovery for Gradle (`build/classes/java/main`, `build/classes/kotlin/main`, etc.) across root and multi-module microservice directories.
+  - Added instant heuristic class resolution mapping `src/main/java/...` to `build/classes/java/main/...`.
+  - Expanded `activationEvents` to match nested Gradle/Maven files (`**/build.gradle`, `**/pom.xml`, `**/settings.gradle`).
+
 ## [1.0.0] - 2026-11-05
 
 ### Improved
