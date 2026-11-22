@@ -59,6 +59,27 @@ export class BytecodeHoverProvider implements vscode.HoverProvider {
       }
     }
 
+    // 3. Check Constant Pool Index Reference (e.g. #15 in instructions or CP definitions)
+    if (word.startsWith('#') && /^#\d+$/.test(word)) {
+      const targetIndex = word;
+      // Search for the declaration line: "   #15 = ..."
+      const declRegex = new RegExp(`^\\s*${targetIndex}\\s*=\\s*`);
+      for (let i = 0; i < document.lineCount; i++) {
+        const line = document.lineAt(i).text;
+        if (declRegex.test(line)) {
+          const md = new vscode.MarkdownString();
+          md.isTrusted = true;
+          md.appendMarkdown(`### \`${targetIndex}\` — *Entrée du Constant Pool*\n\n`);
+          md.appendCodeblock(line.trim(), 'java-bytecode');
+          md.appendMarkdown(`\n*(Ligne ${i + 1} du Constant Pool)*`);
+          return new vscode.Hover(md, range);
+        }
+        if (line.trim() === '{') {
+          break; // Constant Pool ended
+        }
+      }
+    }
+
     return null;
   }
 }

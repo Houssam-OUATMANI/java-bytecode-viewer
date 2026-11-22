@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [2.1.0] - 2026-11-22
+
+### Fixed
+- **Zombie Auto-Reopening Loop**:
+  - Fixed an issue where closing a `.java` source file caused it to immediately reopen because cursor focus returned to the bytecode editor and triggered automatic file opening.
+  - Cursor synchronization now strictly synchronizes only with already visible editors.
+  - Added strict source-to-bytecode identity verification so cursor sync only pairs with the exact corresponding class and source file.
+
+### Added
+- **Explicit "Go to Source File" Action (`javaBytecode.goToSourceFile`)**:
+  - Added a dedicated button `$(go-to-file)` in the bytecode editor title bar and command to jump to the matching `.java` or `.kt` source file at the exact line corresponding to the current bytecode cursor position.
+- **Constant Pool `#<id>` Inline Hover Previews**:
+  - Hovering over any constant pool index reference (`#1`, `#15`, etc.) anywhere in instructions or pool definitions displays its complete declaration directly in an inline tooltip without scrolling.
+- **Kotlin (`.kt`) Source Support**:
+  - Full bidirectional resolution between Kotlin source files (`src/main/kotlin/**/*.kt`) and compiled classes (`build/classes/kotlin/**/*.class`).
+
 ## [2.0.0] - 2026-11-17
 
 ### Added

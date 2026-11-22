@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { BytecodeDocumentProvider } from './providers/bytecodeDocumentProvider';
 import { ClassTreeDataProvider } from './providers/classTreeDataProvider';
 import { BytecodeSymbolProvider } from './providers/bytecodeSymbolProvider';
@@ -175,10 +176,61 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
 
+    vscode.commands.registerCommand('javaBytecode.goToSourceFile', async (itemOrUri?: any) => {
+      let classFilePath: string | undefined;
+
+      if (vscode.window.activeTextEditor?.document.uri.scheme === BytecodeDocumentProvider.SCHEME) {
+        classFilePath = BytecodeDocumentProvider.getClassFilePathFromUri(
+          vscode.window.activeTextEditor.document.uri
+        );
+      } else {
+        classFilePath = resolveClassFilePath(itemOrUri);
+      }
+
+      if (!classFilePath) {
+        vscode.window.showInformationMessage("Ouvrez d'abord un fichier de bytecode.");
+        return;
+      }
+
+      const sourceUri = await ClassResolver.findJavaFileForClass(classFilePath);
+      if (!sourceUri) {
+        vscode.window.showWarningMessage(
+          `Fichier source (.java / .kt) introuvable pour ${path.basename(classFilePath)}.`
+        );
+        return;
+      }
+
+      const doc = await vscode.workspace.openTextDocument(sourceUri);
+      let targetLine = 0;
+
+      // If active editor is bytecode, find line matching current bytecode position
+      if (vscode.window.activeTextEditor?.document.uri.scheme === BytecodeDocumentProvider.SCHEME) {
+        const curLine = vscode.window.activeTextEditor.selection.active.line;
+        const mappedLine = BytecodeLineMapper.findSourceLineForBytecodeLine(
+          vscode.window.activeTextEditor.document,
+          curLine
+        );
+        if (mappedLine !== null) {
+          targetLine = Math.max(0, mappedLine - 1);
+        }
+      }
+
+      const editor = await vscode.window.showTextDocument(doc, {
+        viewColumn: vscode.ViewColumn.One,
+        preserveFocus: false
+      });
+
+      if (targetLine < doc.lineCount) {
+        const range = doc.lineAt(targetLine).range;
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+        editor.selection = new vscode.Selection(range.start, range.end);
+      }
+    }),
+
     vscode.commands.registerCommand('javaBytecode.showCurrentFileBytecode', async (uri?: vscode.Uri) => {
       const targetUri = uri || vscode.window.activeTextEditor?.document.uri;
-      if (!targetUri || !targetUri.fsPath.endsWith('.java')) {
-        vscode.window.showInformationMessage("Ouvrez d'abord un fichier source Java (.java).");
+      if (!targetUri || (!targetUri.fsPath.endsWith('.java') && !targetUri.fsPath.endsWith('.kt'))) {
+        vscode.window.showInformationMessage("Ouvrez d'abord un fichier source Java (.java) ou Kotlin (.kt).");
         return;
       }
 
@@ -220,11 +272,22 @@ export function activate(context: vscode.ExtensionContext) {
       syncDebounceTimer = setTimeout(async () => {
         const editorDoc = e.textEditor.document;
 
-        // Direction A: Java Source (.java) -> Bytecode View
-        if (editorDoc.uri.fsPath.endsWith('.java')) {
-          const bytecodeEditor = vscode.window.visibleTextEditors.find(
-            (editor) => editor.document.uri.scheme === BytecodeDocumentProvider.SCHEME
-          );
+        // Direction A: Java/Kotlin Source (.java / .kt) -> Bytecode View
+        const isSourceFile = editorDoc.uri.fsPath.endsWith('.java') || editorDoc.uri.fsPath.endsWith('.kt');
+        if (isSourceFile) {
+          const expectedClass = await ClassResolver.findClassForJavaFile(editorDoc.uri);
+          if (!expectedClass) {
+            return;
+          }
+
+          const normalizedExpectedClass = path.normalize(expectedClass).toLowerCase();
+          const bytecodeEditor = vscode.window.visibleTextEditors.find((editor) => {
+            if (editor.document.uri.scheme !== BytecodeDocumentProvider.SCHEME) {
+              return false;
+            }
+            const editorClass = BytecodeDocumentProvider.getClassFilePathFromUri(editor.document.uri);
+            return path.normalize(editorClass).toLowerCase() === normalizedExpectedClass;
+          });
 
           if (!bytecodeEditor) {
             return;
@@ -248,7 +311,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        // Direction B: Bytecode View (javabytecode://) -> Java Source (.java)
+        // Direction B: Bytecode View (javabytecode://) -> Java/Kotlin Source
         if (editorDoc.uri.scheme === BytecodeDocumentProvider.SCHEME) {
           const classFilePath = BytecodeDocumentProvider.getClassFilePathFromUri(editorDoc.uri);
           const currentBytecodeLine = e.selections[0].active.line;
@@ -262,33 +325,32 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
 
-          // Find if matching .java editor is already visible
-          let javaEditor = vscode.window.visibleTextEditors.find(
-            (ed) => ed.document.uri.fsPath.endsWith('.java')
+          // Locate source file for this class
+          const targetSourceUri = await ClassResolver.findJavaFileForClass(classFilePath);
+          if (!targetSourceUri) {
+            return;
+          }
+
+          // Check if the matching source file is ALREADY visible in an editor
+          const normalizedTargetSource = path.normalize(targetSourceUri.fsPath).toLowerCase();
+          const sourceEditor = vscode.window.visibleTextEditors.find(
+            (ed) => path.normalize(ed.document.uri.fsPath).toLowerCase() === normalizedTargetSource
           );
 
-          if (!javaEditor) {
-            // Locate Java source file and open it beside if possible
-            const javaUri = await ClassResolver.findJavaFileForClass(classFilePath);
-            if (javaUri) {
-              const doc = await vscode.workspace.openTextDocument(javaUri);
-              javaEditor = await vscode.window.showTextDocument(doc, {
-                viewColumn: vscode.ViewColumn.One,
-                preserveFocus: true
-              });
-            }
+          // IMPORTANT: Only sync with an ALREADY visible editor.
+          // Do NOT automatically open closed documents on cursor change!
+          if (!sourceEditor) {
+            return;
           }
 
-          if (javaEditor) {
-            isInternalSyncing = true;
-            const targetLineIndex = Math.max(0, Math.min(sourceLine - 1, javaEditor.document.lineCount - 1));
-            const lineRange = javaEditor.document.lineAt(targetLineIndex).range;
-            javaEditor.revealRange(lineRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
-            javaEditor.selection = new vscode.Selection(lineRange.start, lineRange.end);
-            setTimeout(() => {
-              isInternalSyncing = false;
-            }, 250);
-          }
+          isInternalSyncing = true;
+          const targetLineIndex = Math.max(0, Math.min(sourceLine - 1, sourceEditor.document.lineCount - 1));
+          const lineRange = sourceEditor.document.lineAt(targetLineIndex).range;
+          sourceEditor.revealRange(lineRange, vscode.TextEditorRevealType.InCenterIfOutsideViewport);
+          sourceEditor.selection = new vscode.Selection(lineRange.start, lineRange.end);
+          setTimeout(() => {
+            isInternalSyncing = false;
+          }, 250);
         }
       }, 120);
     })
