@@ -20,13 +20,13 @@ export class BytecodeHoverProvider implements vscode.HoverProvider {
       const md = new vscode.MarkdownString();
       md.isTrusted = true;
       md.appendMarkdown(`### \`${opcode.mnemonic}\` — *JVM Opcode*\n\n`);
-      md.appendMarkdown(`**Catégorie :** \`${opcode.category}\`\n\n`);
-      md.appendMarkdown(`**Pile d'opérandes :**\n\`\`\`\n${opcode.stack}\n\`\`\`\n\n`);
+      md.appendMarkdown(`**Category:** \`${opcode.category}\`\n\n`);
+      md.appendMarkdown(`**Operand Stack:**\n\`\`\`\n${opcode.stack}\n\`\`\`\n\n`);
       if (opcode.operands) {
-        md.appendMarkdown(`**Opérandes :** \`${opcode.operands}\`\n\n`);
+        md.appendMarkdown(`**Operands:** \`${opcode.operands}\`\n\n`);
       }
       md.appendMarkdown(`${opcode.description}\n\n`);
-      md.appendMarkdown(`---\n*Spécification Java Virtual Machine (JVM)*`);
+      md.appendMarkdown(`---\n*Java Virtual Machine (JVM) Specification*`);
       return new vscode.Hover(md, range);
     }
 
@@ -36,20 +36,20 @@ export class BytecodeHoverProvider implements vscode.HoverProvider {
     if (tagMatch && range.start.character >= lineText.indexOf(tagMatch[2]) && range.end.character <= lineText.indexOf(tagMatch[2]) + tagMatch[2].length) {
       const tag = tagMatch[2];
       const tagDocs: Record<string, string> = {
-        Methodref: 'Référence à une méthode déclarée dans une classe standard.',
-        Fieldref: 'Référence à un champ (field) de classe ou d’instance.',
-        InterfaceMethodref: 'Référence à une méthode déclarée dans une interface.',
-        Class: 'Référence à une classe ou interface (nom fully qualified).',
-        NameAndType: 'Paire nom de membre et descripteur de type (ex: `<init>:()V`).',
-        Utf8: 'Chaîne de caractères encodée en format UTF-8 modifié (identifiants, descripteurs).',
-        String: 'Instance littérale de `java.lang.String`.',
-        Integer: 'Constante entière 32 bits.',
-        Float: 'Constante à virgule flottante 32 bits.',
-        Long: 'Constante entière 64 bits (occupe 2 entrées consécutives dans le Constant Pool).',
-        Double: 'Constante à virgule flottante 64 bits (occupe 2 entrées consécutives).',
-        InvokeDynamic: 'Point d’appel dynamique (bootstrap method specifier + NameAndType).',
-        MethodHandle: 'Handle d’exécution directe d’une méthode ou d’un champ (Java 7+).',
-        MethodType: 'Descripteur de signature de méthode (Java 7+).'
+        Methodref: 'Reference to a method declared in a class.',
+        Fieldref: 'Reference to a field in a class or instance.',
+        InterfaceMethodref: 'Reference to a method declared in an interface.',
+        Class: 'Reference to a class or interface (fully qualified binary name).',
+        NameAndType: 'Pair representing field or method name and type descriptor (e.g. `<init>:()V`).',
+        Utf8: 'String constant encoded in modified UTF-8 (identifiers, descriptors, strings).',
+        String: 'Literal instance of `java.lang.String`.',
+        Integer: '32-bit signed integer constant.',
+        Float: '32-bit single-precision floating-point constant.',
+        Long: '64-bit signed two\'s-complement integer (occupies 2 consecutive slots in the Constant Pool).',
+        Double: '64-bit double-precision floating-point number (occupies 2 consecutive slots in the Constant Pool).',
+        InvokeDynamic: 'Dynamic call site entry containing a bootstrap method specifier and NameAndType.',
+        MethodHandle: 'Direct handle to an underlying method, constructor, or field (Java 7+).',
+        MethodType: 'Method signature descriptor representing parameter types and return type (Java 7+).'
       };
 
       if (tagDocs[tag]) {
@@ -69,9 +69,9 @@ export class BytecodeHoverProvider implements vscode.HoverProvider {
         if (declRegex.test(line)) {
           const md = new vscode.MarkdownString();
           md.isTrusted = true;
-          md.appendMarkdown(`### \`${targetIndex}\` — *Entrée du Constant Pool*\n\n`);
+          md.appendMarkdown(`### \`${targetIndex}\` — *Constant Pool Entry*\n\n`);
           md.appendCodeblock(line.trim(), 'java-bytecode');
-          md.appendMarkdown(`\n*(Ligne ${i + 1} du Constant Pool)*`);
+          md.appendMarkdown(`\n*(Line ${i + 1} in Constant Pool)*`);
           return new vscode.Hover(md, range);
         }
         if (line.trim() === '{') {

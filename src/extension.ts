@@ -105,7 +105,7 @@ export function activate(context: vscode.ExtensionContext) {
       await config.update(key, !current, target);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`Impossible de modifier le réglage « ${name} » : ${message}`);
+      vscode.window.showErrorMessage(`Unable to update setting "${name}": ${message}`);
       return;
     }
 
@@ -116,7 +116,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (activeEditor && activeEditor.document.uri.scheme === BytecodeDocumentProvider.SCHEME) {
       docProvider.refresh(activeEditor.document.uri);
     }
-    vscode.window.setStatusBarMessage(`${name} : ${!current ? 'Activé' : 'Désactivé'}`, 3000);
+    vscode.window.setStatusBarMessage(`${name}: ${!current ? 'Enabled' : 'Disabled'}`, 3000);
   };
 
   // 4. Register commands
@@ -126,19 +126,19 @@ export function activate(context: vscode.ExtensionContext) {
     }),
 
     vscode.commands.registerCommand('javaBytecode.toggleVerbose', () => {
-      toggleSetting('verbose', 'Mode Verbose & Constant Pool');
+      toggleSetting('verbose', 'Verbose & Constant Pool');
     }),
 
     vscode.commands.registerCommand('javaBytecode.togglePrivateMembers', () => {
-      toggleSetting('showPrivateMembers', 'Membres privés');
+      toggleSetting('showPrivateMembers', 'Private Members');
     }),
 
     vscode.commands.registerCommand('javaBytecode.toggleLineNumbers', () => {
-      toggleSetting('showLineAndLocalVariableTables', 'Tables de lignes et variables');
+      toggleSetting('showLineAndLocalVariableTables', 'Line & Variable Tables');
     }),
 
     vscode.commands.registerCommand('javaBytecode.toggleSignatures', () => {
-      toggleSetting('showInternalSignatures', 'Signatures internes (-s)');
+      toggleSetting('showInternalSignatures', 'Internal Signatures (-s)');
     }),
 
     vscode.commands.registerCommand('javaBytecode.openClassBytecode', async (itemOrPath: any) => {
@@ -188,14 +188,14 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       if (!classFilePath) {
-        vscode.window.showInformationMessage("Ouvrez d'abord un fichier de bytecode.");
+        vscode.window.showInformationMessage("Please open a bytecode document first.");
         return;
       }
 
       const sourceUri = await ClassResolver.findJavaFileForClass(classFilePath);
       if (!sourceUri) {
         vscode.window.showWarningMessage(
-          `Fichier source (.java / .kt) introuvable pour ${path.basename(classFilePath)}.`
+          `Source file (.java / .kt) not found for ${path.basename(classFilePath)}.`
         );
         return;
       }
@@ -230,14 +230,14 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('javaBytecode.showCurrentFileBytecode', async (uri?: vscode.Uri) => {
       const targetUri = uri || vscode.window.activeTextEditor?.document.uri;
       if (!targetUri || (!targetUri.fsPath.endsWith('.java') && !targetUri.fsPath.endsWith('.kt'))) {
-        vscode.window.showInformationMessage("Ouvrez d'abord un fichier source Java (.java) ou Kotlin (.kt).");
+        vscode.window.showInformationMessage("Please open a Java (.java) or Kotlin (.kt) source file first.");
         return;
       }
 
       const classPath = await ClassResolver.findClassForJavaFile(targetUri);
       if (!classPath) {
         vscode.window.showWarningMessage(
-          `Aucun fichier .class compilé trouvé pour ${targetUri.fsPath.split(/[\\/]/).pop()}. Compilez votre projet Java (mvn compile / gradle build) et réessayez.`
+          `No compiled .class file found for ${targetUri.fsPath.split(/[\\/]/).pop()}. Compile your Java/Kotlin project (mvn compile / gradle build) and try again.`
         );
         return;
       }

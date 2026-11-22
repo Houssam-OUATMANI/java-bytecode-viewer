@@ -17,7 +17,7 @@ export class BytecodeDocumentProvider implements vscode.TextDocumentContentProvi
       const output = await JavapRunner.disassemble(classFilePath);
       return output;
     } catch (err: any) {
-      return `// Erreur lors du désassemblage de ${classFilePath} :\n// ${err?.message || err}\n\n// Vérifiez les paramètres de l'extension (javaBytecode.javapPath).`;
+      return `// Error disassembling ${classFilePath}:\n// ${err?.message || err}\n\n// Check extension settings (javaBytecode.javapPath).`;
     }
   }
 

@@ -16,9 +16,9 @@ export class BytecodeDiffManager implements vscode.TextDocumentContentProvider {
     const classFilePath = uri.path.endsWith('.javap') ? uri.path.slice(0, -6) : uri.path;
     const snapshot = BytecodeDiffManager.snapshots.get(classFilePath);
     if (!snapshot) {
-      return `// Aucun snapshot trouvé pour ${classFilePath}`;
+      return `// No snapshot found for ${classFilePath}`;
     }
-    return `// Snapshot pris le : ${snapshot.timestamp.toLocaleTimeString()}\n` + snapshot.content;
+    return `// Snapshot taken at: ${snapshot.timestamp.toLocaleTimeString()}\n` + snapshot.content;
   }
 
   public static async takeSnapshot(classFilePath: string): Promise<void> {
@@ -26,7 +26,7 @@ export class BytecodeDiffManager implements vscode.TextDocumentContentProvider {
     const now = new Date();
     this.snapshots.set(classFilePath, { content, timestamp: now });
     vscode.window.showInformationMessage(
-      `Snapshot enregistré pour ${path.basename(classFilePath)} (${now.toLocaleTimeString()}).`
+      `Bytecode snapshot saved for ${path.basename(classFilePath)} (${now.toLocaleTimeString()}).`
     );
   }
 
@@ -34,7 +34,7 @@ export class BytecodeDiffManager implements vscode.TextDocumentContentProvider {
     if (!this.snapshots.has(classFilePath)) {
       await this.takeSnapshot(classFilePath);
       vscode.window.showInformationMessage(
-        "Premier snapshot créé. Modifiez et recompilez votre code, puis relancez 'Compare with Snapshot'."
+        "Initial snapshot recorded. Modify and recompile your code, then run 'Compare with Bytecode Snapshot'."
       );
       return;
     }
@@ -48,7 +48,7 @@ export class BytecodeDiffManager implements vscode.TextDocumentContentProvider {
     });
     const currentUri = BytecodeDocumentProvider.getUriForClassFile(classFilePath);
 
-    const title = `${baseName} [Snapshot ${snapshot.timestamp.toLocaleTimeString()}] ↔ Actuel`;
+    const title = `${baseName} [Snapshot ${snapshot.timestamp.toLocaleTimeString()}] ↔ Current`;
     await vscode.commands.executeCommand('vscode.diff', snapshotUri, currentUri, title);
   }
 
@@ -56,13 +56,13 @@ export class BytecodeDiffManager implements vscode.TextDocumentContentProvider {
     this.selectedForCompare = classFilePath;
     vscode.commands.executeCommand('setContext', 'javaBytecode.hasCompareSelection', true);
     vscode.window.showInformationMessage(
-      `Sélectionné pour comparaison : ${path.basename(classFilePath)}. Faites un clic droit sur une autre classe pour comparer.`
+      `Selected for compare: ${path.basename(classFilePath)}. Right-click another class to compare.`
     );
   }
 
   public static async compareWithSelected(targetClassFilePath: string): Promise<void> {
     if (!this.selectedForCompare) {
-      vscode.window.showWarningMessage("Veuillez d'abord sélectionner une classe avec 'Select for Compare'.");
+      vscode.window.showWarningMessage("Please select a class first using 'Select for Bytecode Compare'.");
       return;
     }
 

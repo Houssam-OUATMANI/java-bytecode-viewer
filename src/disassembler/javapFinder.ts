@@ -27,7 +27,7 @@ export class JavapFinder {
     }
 
     throw new Error(
-      "Impossible de trouver l'exécutable 'javap' du JDK. Assurez-vous qu'un JDK est installé et configurez 'javaBytecode.javapPath' dans les paramètres de VS Code."
+      "Unable to find the JDK 'javap' executable. Ensure a JDK is installed or configure 'javaBytecode.javapPath' in VS Code settings."
     );
   }
 
